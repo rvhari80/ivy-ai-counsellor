@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────
+# IVY AI Counsellor — requirements.txt
+# ─────────────────────────────────────────────────────────────
+
+# ── Web Framework ─────────────────────────────────────────────
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9            # file uploads in admin PDF panel
+
+# ── LLM APIs ──────────────────────────────────────────────────
+anthropic>=0.18.0
+openai>=1.12.0
+
+# ── RAG Framework ─────────────────────────────────────────────
+langchain>=0.1.0                   # ✅ MISSING — RAG pipeline orchestration
+langchain-openai>=0.0.5            # ✅ MISSING — LangChain + OpenAI embeddings bridge
+
+# ── Vector Database ───────────────────────────────────────────
+pinecone-client>=3.0.0
+
+# ── PDF Processing ────────────────────────────────────────────
+pymupdf>=1.24.0                    # fitz — PDF text extraction
+
+# ── Database ──────────────────────────────────────────────────
+# sqlite3 is built into Python — no pip install needed
+aiosqlite>=0.19.0                  # async wrapper for sqlite3
+
+# ── Data Validation ───────────────────────────────────────────
+pydantic>=2.0.0
+pydantic-settings>=2.0.0          # load .env into typed Settings class
+
+# ── Environment ───────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── Rate Limiting ─────────────────────────────────────────────
+slowapi>=0.1.9
+
+# ── Notifications ─────────────────────────────────────────────
+sendgrid>=6.11.0
+aiohttp>=3.9.0                     # ✅ MISSING — async HTTP for WhatsApp API calls
+
+# ── Scheduling ────────────────────────────────────────────────
+apscheduler>=3.10.0                # weekly gap report + session cleanup
+
+# ── Tokenisation ──────────────────────────────────────────────
+tiktoken>=0.6.0                    # token counting for PDF chunking
+
+# ── Monitoring ────────────────────────────────────────────────
+sentry-sdk[fastapi]>=1.40.0        # error tracking in production
+
+# ── Testing ───────────────────────────────────────────────────
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0                      # FastAPI TestClient dependency
+pytest-cov>=4.1.0                  # test coverage reports
+locust>=2.24.0                     # load testing (Day 12)

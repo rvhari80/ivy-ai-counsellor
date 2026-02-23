@@ -1,0 +1,7 @@
+# IVY AI Counsellor - Production-only dependencies
+
+# Include all base requirements
+-r base.txt
+
+# Production monitoring and logging (if needed in future)
+# sentry-sdk>=1.40.0
