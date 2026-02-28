@@ -14,7 +14,7 @@ class ExtractedProfile(BaseModel):
     target_course: str | None = None
     target_country: str | None = None
     target_intake: str | None = None
-    budget_inr: int | None = None
+    budget_inr: str | None = None
     ielts_score: str | None = None
     percentage: str | None = None
 

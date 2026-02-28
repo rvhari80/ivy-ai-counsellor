@@ -4,7 +4,7 @@ import json
 import re
 import logging
 from app.models.schemas import IntentResult, ExtractedProfile
-from app.utils.memory import get_full_context_for_llm
+from app.utils.memory import get_history
 
 import anthropic
 
@@ -61,7 +61,7 @@ def _parse_json_from_text(text: str) -> dict:
 
 async def run_intent(session_id: str) -> IntentResult | None:
     """Call Claude with conversation history; return IntentResult."""
-    messages = get_full_context_for_llm(session_id)
+    messages = get_history(session_id)
     if not messages:
         return None
     key = os.getenv("ANTHROPIC_API_KEY")

@@ -1,11 +1,8 @@
 """Fallback responses when RAG confidence is low."""
 import os
-import json
 import logging
 from typing import Literal
-
-import anthropic
-
+from openai import AsyncOpenAI
 from app.models.database import get_db, log_unanswered
 
 logger = logging.getLogger(__name__)
@@ -32,26 +29,47 @@ TEMPLATES = {
 }
 
 CLASSIFY_PROMPT = """Classify this user message into exactly one category. Reply with only one word.
-Categories: study_abroad | off_topic | sensitive
+
+Categories:
+- study_abroad: questions about universities, visas, IELTS, scholarships, courses, countries, applications
+- off_topic: cricket, weather, jokes, cooking, sports, movies, anything unrelated to studying abroad
+- sensitive: visa rejection, mental health distress, financial crisis, depression, extreme stress, hopelessness, cannot afford, devastated, don't know what to do
+
+Examples:
+"What IELTS score for Australia" -> study_abroad
+"What is cricket score" -> off_topic
+"My visa got rejected I am devastated" -> sensitive
+"I cannot afford fees I am very stressed" -> sensitive
+"I feel hopeless about my future" -> sensitive
+
+Reply with ONLY one word: study_abroad or off_topic or sensitive
 
 User message:
 """
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 
 
 async def classify_query(query: str) -> Literal["study_abroad", "off_topic", "sensitive"]:
-    """Call Claude to classify query."""
-    key = os.getenv("ANTHROPIC_API_KEY")
+    """Call OpenAI to classify query."""
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
         return "study_abroad"
     try:
-        client = anthropic.AsyncAnthropic(api_key=key)
-        r = await client.messages.create(
-            model=MODEL,
+        client = AsyncOpenAI(api_key=key)
+        r = await client.chat.completions.create(
+            model="gpt-4o-mini",
             max_tokens=20,
-            messages=[{"role": "user", "content": CLASSIFY_PROMPT + query[:500]}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You classify messages. Reply with only one word: study_abroad or off_topic or sensitive"
+                },
+                {
+                    "role": "user",
+                    "content": CLASSIFY_PROMPT + query[:500]
+                }
+            ],
         )
-        text = (r.content[0].text if r.content else "").strip().lower()
+        text = (r.choices[0].message.content or "").strip().lower()
         if "off_topic" in text or "off topic" in text:
             return "off_topic"
         if "sensitive" in text:
