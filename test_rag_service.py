@@ -27,8 +27,14 @@ async def test_rag_service():
     
     try:
         # Stream the response
+        full_response = ""
         async for token in query_rag(test_question, test_session_id):
-            print(token, end="", flush=True)
+            full_response += token
+            try:
+                print(token, end="", flush=True)
+            except UnicodeEncodeError:
+                # Skip characters that can't be encoded in Windows console
+                print("?", end="", flush=True)
         
         print("\n" + "-" * 60)
         
@@ -36,10 +42,10 @@ async def test_rag_service():
         tokens_used = get_session_token_usage(test_session_id)
         print(f"\nTotal tokens used in session: {tokens_used}")
         
-        print("\n✅ RAG service test completed successfully!")
+        print("\n[SUCCESS] RAG service test completed successfully!")
         
     except Exception as e:
-        print(f"\n❌ Error during test: {e}")
+        print(f"\n[ERROR] Error during test: {e}")
         import traceback
         traceback.print_exc()
 

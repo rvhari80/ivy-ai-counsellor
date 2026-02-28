@@ -16,7 +16,7 @@ langchain>=0.1.0                   # ✅ MISSING — RAG pipeline orchestration
 langchain-openai>=0.0.5            # ✅ MISSING — LangChain + OpenAI embeddings bridge
 
 # ── Vector Database ───────────────────────────────────────────
-pinecone-client>=3.0.0
+pinecone>=5.0.0
 
 # ── PDF Processing ────────────────────────────────────────────
 pymupdf>=1.24.0                    # fitz — PDF text extraction
