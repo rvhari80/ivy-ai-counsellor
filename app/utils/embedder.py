@@ -1,8 +1,8 @@
 """OpenAI embedding wrapper for IVY AI Counsellor."""
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from openai import AsyncOpenAI
-from dotenv import load_dotenv  # ← ADD THIS
-load_dotenv() 
 
 MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 _client: AsyncOpenAI | None = None

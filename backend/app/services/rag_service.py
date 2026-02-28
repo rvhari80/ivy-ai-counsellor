@@ -1,1 +1,0 @@
-# RAG query pipeline (core)

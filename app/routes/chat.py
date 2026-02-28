@@ -7,8 +7,6 @@ from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, validator
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.services.rag_service import query_rag
 from app.models.database import get_db, save_conversation
@@ -16,9 +14,6 @@ from app.models.database import get_db, save_conversation
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
 
 # In-memory rate limiting per session (30 messages per hour)
 _session_message_counts: dict[str, list[datetime]] = {}
