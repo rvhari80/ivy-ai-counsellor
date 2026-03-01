@@ -1,4 +1,4 @@
-"""Tiktoken-based text splitter for PDF chunks."""
+"""Tiktoken-based text splitter for ... chunks."""
 import tiktoken
 
 CHUNK_SIZE = 512

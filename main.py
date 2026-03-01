@@ -7,96 +7,140 @@ includes routers, and handles application lifecycle events.
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import logging
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.models.database import init_db
 from app.routes.chat import router as chat_router
+from app.routes.admin import router as admin_router
+from app.services.gap_report_service import schedule_gap_report
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Setup basic logging
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+# ── Scheduler (global so it can be stopped on shutdown) ───────────────────────
+scheduler = AsyncIOScheduler()
 
+
+# ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan context manager.
-    Handles startup and shutdown events.
-    """
-    # Startup
-    logger.info("Starting IVY AI Counsellor application...")
-    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
-    logger.info(f"Model: {os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-4-5')}")
+    """Application startup and shutdown."""
 
-    # Initialize database
+    # ── STARTUP ──────────────────────────────────────────────
+    logger.info("Starting IVY AI Counsellor...")
+    logger.info("Environment : %s", os.getenv("ENVIRONMENT", "development"))
+    logger.info("OpenAI model: %s", os.getenv("OPENAI_MODEL", "gpt-4o"))
+    logger.info("Pinecone idx: %s", os.getenv("PINECONE_INDEX", "ivy-counsellor"))
+
+    # 1. Database
     try:
         await init_db()
-        logger.info("Database initialized successfully")
+        logger.info("Database initialised ✅")
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.error("Database init failed: %s", e)
         raise
 
-    logger.info("Application startup complete")
+    # 2. APScheduler — weekly gap report every Monday 9 AM IST
+    try:
+        schedule_gap_report(scheduler)
+        scheduler.start()
+        logger.info("Scheduler started ✅")
+    except Exception as e:
+        logger.error("Scheduler failed to start: %s", e)
+
+    logger.info("Application startup complete ✅")
 
     yield
 
-    # Shutdown
-    logger.info("Shutting down IVY AI Counsellor application...")
+    # ── SHUTDOWN ─────────────────────────────────────────────
+    logger.info("Shutting down IVY AI Counsellor...")
+    try:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            logger.info("Scheduler stopped ✅")
+    except Exception as e:
+        logger.warning("Scheduler shutdown error: %s", e)
+
+    logger.info("Shutdown complete.")
 
 
-# Create FastAPI app instance
+# ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="IVY AI Counsellor",
-    description="RAG-based AI chat agent for IVY Overseas study abroad counseling",
-    version="1.0.0",
-    lifespan=lifespan,
+    title       = "IVY AI Counsellor",
+    description = "RAG-based AI chat agent for IVY Overseas study abroad counselling",
+    version     = "1.0.0",
+    lifespan    = lifespan,
+    docs_url    = "/docs",
+    redoc_url   = "/redoc",
 )
 
-# CORS middleware
+# ── CORS ──────────────────────────────────────────────────────────────────────
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins     = [o.strip() for o in os.getenv(
+                            "ALLOWED_ORIGINS",
+                            "http://localhost:3000,http://localhost:8000"
+                         ).split(",")],
+    allow_credentials = True,
+    allow_methods     = ["*"],
+    allow_headers     = ["*"],
 )
 
-# Include routers
-app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
+# ── Static files (admin dashboard) ───────────────────────────────────────────
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    logger.info("Static files mounted at /static")
+
+# ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(chat_router,  prefix="/api/v1",       tags=["chat"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["admin"])
 
 
-# Root endpoint
-@app.get("/")
+# ── Core endpoints ────────────────────────────────────────────────────────────
+@app.get("/", tags=["root"])
 async def root():
-    """Root endpoint - API information."""
+    """API information."""
     return {
-        "message": "IVY AI Counsellor API",
-        "version": "1.0.0",
-        "status": "operational",
-    }
-
-
-# Health check endpoint
-@app.get("/api/v1/health")
-async def health():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
+        "name":        "IVY AI Counsellor API",
+        "version":     "1.0.0",
+        "status":      "operational",
         "environment": os.getenv("ENVIRONMENT", "development"),
+        "docs":        "/docs",
+        "health":      "/api/v1/health",
+        "admin":       "/static/admin.html",
     }
 
 
+@app.get("/api/v1/health", tags=["root"])
+async def health():
+    """Health check — used by Railway as readiness probe."""
+    return {
+        "status":      "healthy",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "scheduler":   "running" if scheduler.running else "stopped",
+    }
+
+
+# ── Dev entrypoint ────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
+        host      = "0.0.0.0",
+        port      = int(os.getenv("PORT", 8000)),
+        reload    = True,
+        log_level = "info",
     )

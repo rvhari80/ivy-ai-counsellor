@@ -55,10 +55,12 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="development", description="Environment: development, staging, production")
 
     # CORS Configuration
-    ALLOWED_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
-        description="Allowed CORS origins"
-    )
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+
+    # Email / Notifications
+    EMAIL_FROM:          str = "ai@ivyoverseas.com"
+    SMTP2GO_API_KEY:     str = ""
+    ADMIN_DASHBOARD_URL: str = "http://localhost:8000/static/admin.html"
 
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = Field(
@@ -84,6 +86,16 @@ class Settings(BaseSettings):
         default=9,
         description="Hour of day to send gap reports (24-hour format)"
     )
+    # Thresholds
+    HOT_LEAD_SCORE_THRESHOLD: int   = 60
+    RAG_TOP_K:                int   = 3
+    RAG_SIMILARITY_THRESHOLD: float = 0.50
+    DEBUG:                    bool  = False
+
+        # Admin
+    ADMIN_API_KEY:  str = ""
+    ADMIN_EMAIL:    str = ""
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
     class Config:
         env_file = ".env"
